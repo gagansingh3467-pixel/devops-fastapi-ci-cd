@@ -1,0 +1,22 @@
+groups:
+  - name: fastapi-alerts
+    rules:
+      - alert: FastAPIServiceDown
+        expr: up{job="fastapi"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "FastAPI service is DOWN"
+          description: "The FastAPI container is not responding on /metrics"
+
+  - name: host-high-cpu
+    rules:
+      - alert: HighCPUUsage
+        expr: rate(node_cpu_seconds_total{mode!="idle"}[2m]) > 0.75
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage > 75% for more than 1 minute"
