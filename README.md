@@ -29,7 +29,7 @@ Logging, metrics & health checks
 <img src="screenshots/health.png" width="700">
 
 ### Swagger API Docs
-<img src="screenshots/docs.png" width="700">
+<img src="screenshots/swagger.png" width="700">
 
 ### Promethius UI
 <img src="screenshots/promethius.png" width="700">
