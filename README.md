@@ -17,6 +17,28 @@ Docker Compose orchestration
 Logging, metrics & health checks
 
 🚀 Live Demo (Render Deployment)
+## 📸 Screenshots
+
+### Render Deployment Dashboard
+<img src="screenshots/render.png" width="700">
+
+### FastAPI Root Endpoint
+<img src="screenshots/root.png" width="700">
+
+### Health Check Endpoint
+<img src="screenshots/health.png" width="700">
+
+### Swagger API Docs
+<img src="screenshots/docs.png" width="700">
+
+### Promethius UI
+<img src="screenshots/promethius.png" width="700">
+
+### Grafana Dashboard
+<img src="screenshots/grafana.png" width="700">
+
+### Alertmanager
+<img src="screenshots/alert.png" width="700">
 
 Your application is deployed publicly using Render:
 
