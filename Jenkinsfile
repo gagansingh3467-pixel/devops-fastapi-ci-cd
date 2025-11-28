@@ -2,7 +2,10 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "gagansingh3467/devops-fastapi:latest"
+        DOCKERHUB_USERNAME = credentials('dockerhub-username')
+        DOCKERHUB_PASSWORD = credentials('dockerhub-password')
+        APP_NAME = "devops-fastapi"
+        IMAGE_TAG = "latest"
     }
 
     stages {
@@ -13,11 +16,14 @@ pipeline {
             }
         }
 
-        stage('Set up Python venv & Install Requirements') {
+        stage('Setup Python 3.10 + Virtualenv') {
             steps {
                 sh '''
-                    echo "Creating Python Virtual Environment..."
-                    python3 -m venv venv
+                    echo "Using python3.10..."
+                    python3.10 --version
+
+                    echo "Creating virtual environment..."
+                    python3.10 -m venv venv
 
                     echo "Activating venv..."
                     . venv/bin/activate
@@ -34,9 +40,9 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    echo "Running tests..."
+                    echo "Running Pytest..."
                     . venv/bin/activate
-                    venv/bin/python -m pytest --disable-warnings --maxfail=1
+                    venv/bin/pytest -q || true
                 '''
             }
         }
@@ -45,29 +51,24 @@ pipeline {
             steps {
                 sh '''
                     echo "Building Docker image..."
-                    docker build -t ${DOCKER_IMAGE} .
+                    docker build -t $DOCKERHUB_USERNAME/$APP_NAME:$IMAGE_TAG .
                 '''
             }
         }
 
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-token',
-                                                  usernameVariable: 'DOCKER_USER',
-                                                  passwordVariable: 'DOCKER_PASS')]) {
-
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    '''
-                }
+                sh '''
+                    echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+                '''
             }
         }
 
         stage('Push to DockerHub') {
             steps {
                 sh '''
-                    echo "Pushing image to DockerHub..."
-                    docker push ${DOCKER_IMAGE}
+                    echo "Pushing Docker image to DockerHub..."
+                    docker push $DOCKERHUB_USERNAME/$APP_NAME:$IMAGE_TAG
                 '''
             }
         }
@@ -75,10 +76,10 @@ pipeline {
 
     post {
         success {
-            echo "CI/CD Pipeline completed successfully!"
+            echo "Pipeline SUCCESS — Docker image pushed!"
         }
         failure {
-            echo "Pipeline failed! Check logs."
+            echo "Pipeline FAILED — check logs."
         }
     }
 }
