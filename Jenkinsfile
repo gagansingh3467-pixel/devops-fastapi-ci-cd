@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        DOCKERHUB_USER = credentials('dockerhub-username')
+        DOCKERHUB_TOKEN = credentials('dockerhub-token')
     }
 
     stages {
@@ -13,23 +14,18 @@ pipeline {
             }
         }
 
-        stage('Install Python & Requirements') {
+        stage('Setup Python Environment') {
             steps {
                 sh '''
                     apt-get update
                     apt-get install -y python3 python3-pip python3-venv
 
-                    # Create virtual environment
+                    # Create virtualenv
                     python3 -m venv venv
 
-                    # Activate venv
-                    source venv/bin/activate
-
-                    # Upgrade pip inside venv
-                    pip install --upgrade pip
-
-                    # Install project requirements
-                    pip install -r app/requirements.txt
+                    # Install dependencies WITHOUT activation
+                    venv/bin/pip install --upgrade pip
+                    venv/bin/pip install -r app/requirements.txt
                 '''
             }
         }
@@ -37,8 +33,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    source venv/bin/activate
-                    pytest -q
+                    venv/bin/pytest -q
                 '''
             }
         }
@@ -46,7 +41,7 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    docker build -t $DOCKERHUB_CREDENTIALS_USR/devops-fastapi:jenkins -f docker/Dockerfile .
+                    docker build -t ${DOCKERHUB_USER}/devops-fastapi:jenkins -f docker/Dockerfile .
                 '''
             }
         }
@@ -54,7 +49,7 @@ pipeline {
         stage('Docker Login') {
             steps {
                 sh '''
-                    echo "$DOCKERHUB_CREDENTIALS_PSW" | docker login -u "$DOCKERHUB_CREDENTIALS_USR" --password-stdin
+                    echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
                 '''
             }
         }
@@ -62,7 +57,7 @@ pipeline {
         stage('Push to DockerHub') {
             steps {
                 sh '''
-                    docker push $DOCKERHUB_CREDENTIALS_USR/devops-fastapi:jenkins
+                    docker push ${DOCKERHUB_USER}/devops-fastapi:jenkins
                 '''
             }
         }
