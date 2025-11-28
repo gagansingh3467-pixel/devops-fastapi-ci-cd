@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = credentials('dockerhub-username')
-        DOCKERHUB_TOKEN = credentials('dockerhub-token')
+        DOCKER_IMAGE = "gagansingh3467/devops-fastapi:latest"
     }
 
     stages {
@@ -14,17 +13,19 @@ pipeline {
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('Set up Python venv & Install Requirements') {
             steps {
                 sh '''
-                    apt-get update
-                    apt-get install -y python3 python3-pip python3-venv
-
-                    # Create virtualenv
+                    echo "Creating Python Virtual Environment..."
                     python3 -m venv venv
 
-                    # Install dependencies WITHOUT activation
+                    echo "Activating venv..."
+                    . venv/bin/activate
+
+                    echo "Upgrading pip..."
                     venv/bin/pip install --upgrade pip
+
+                    echo "Installing requirements..."
                     venv/bin/pip install -r app/requirements.txt
                 '''
             }
@@ -33,7 +34,9 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    venv/bin/pytest -q
+                    echo "Running tests..."
+                    . venv/bin/activate
+                    venv/bin/python -m pytest --disable-warnings --maxfail=1
                 '''
             }
         }
@@ -41,25 +44,41 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    docker build -t ${DOCKERHUB_USER}/devops-fastapi:jenkins -f docker/Dockerfile .
+                    echo "Building Docker image..."
+                    docker build -t ${DOCKER_IMAGE} .
                 '''
             }
         }
 
         stage('Docker Login') {
             steps {
-                sh '''
-                    echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
-                '''
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-token',
+                                                  usernameVariable: 'DOCKER_USER',
+                                                  passwordVariable: 'DOCKER_PASS')]) {
+
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+                }
             }
         }
 
         stage('Push to DockerHub') {
             steps {
                 sh '''
-                    docker push ${DOCKERHUB_USER}/devops-fastapi:jenkins
+                    echo "Pushing image to DockerHub..."
+                    docker push ${DOCKER_IMAGE}
                 '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo "CI/CD Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed! Check logs."
         }
     }
 }
