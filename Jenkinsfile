@@ -3,14 +3,13 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        IMAGE_NAME = "gagansingh3467/devops-fastapi"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/gagansingh3467-pixel/devops-fastapi-ci-cd.git'
+                git branch: 'main', url: 'https://github.com/gagansingh3467-pixel/devops-fastapi-ci-cd.git'
             }
         }
 
@@ -18,8 +17,19 @@ pipeline {
             steps {
                 sh '''
                     apt-get update
-                    apt-get install -y python3 python3-pip
-                    pip3 install -r app/requirements.txt
+                    apt-get install -y python3 python3-pip python3-venv
+
+                    # Create virtual environment
+                    python3 -m venv venv
+
+                    # Activate venv
+                    source venv/bin/activate
+
+                    # Upgrade pip inside venv
+                    pip install --upgrade pip
+
+                    # Install project requirements
+                    pip install -r app/requirements.txt
                 '''
             }
         }
@@ -27,7 +37,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    pip3 install pytest
+                    source venv/bin/activate
                     pytest -q
                 '''
             }
@@ -36,7 +46,7 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    docker build -t $IMAGE_NAME:latest -f docker/Dockerfile .
+                    docker build -t $DOCKERHUB_CREDENTIALS_USR/devops-fastapi:jenkins -f docker/Dockerfile .
                 '''
             }
         }
@@ -44,7 +54,7 @@ pipeline {
         stage('Docker Login') {
             steps {
                 sh '''
-                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                    echo "$DOCKERHUB_CREDENTIALS_PSW" | docker login -u "$DOCKERHUB_CREDENTIALS_USR" --password-stdin
                 '''
             }
         }
@@ -52,9 +62,10 @@ pipeline {
         stage('Push to DockerHub') {
             steps {
                 sh '''
-                    docker push $IMAGE_NAME:latest
+                    docker push $DOCKERHUB_CREDENTIALS_USR/devops-fastapi:jenkins
                 '''
             }
         }
     }
 }
+
